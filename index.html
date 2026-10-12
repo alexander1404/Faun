@@ -1,0 +1,828 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Міръ Искусства · Фавнъ, который сошёл съ древней вазы</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Oranienbaum&display=swap" rel="stylesheet">
+<style>
+/* ============ ОСНОВА ============ */
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{height:100%}
+body{
+  font-family:"Cormorant",Georgia,serif;
+  background:#E2D5B6;
+  overflow:hidden;
+  -webkit-font-smoothing:antialiased;
+}
+/* зерно бумаги поверх всего */
+body::after{
+  content:"";position:fixed;inset:0;z-index:60;pointer-events:none;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='260' height='260'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.30 0 0 0 0 0.24 0 0 0 0 0.16 0 0 0 0.6 0'/%3E%3C/filter%3E%3Crect width='260' height='260' filter='url(%23n)'/%3E%3C/svg%3E");
+  opacity:.26;mix-blend-mode:multiply;
+}
+
+/* ============ КОЛОНТИТУЛ И ФОЛИО ============ */
+#topbar,#folio{
+  position:fixed;left:0;right:0;z-index:20;
+  display:flex;align-items:center;justify-content:space-between;
+  padding:0 34px;height:46px;
+  font-size:11px;letter-spacing:.34em;text-transform:uppercase;
+  color:var(--chrome);
+}
+#topbar{top:0;border-bottom:1px solid var(--chrome-line)}
+#folio{bottom:0;border-top:1px solid var(--chrome-line)}
+#folio{gap:20px}
+body[data-theme="light"]{--chrome:rgba(74,58,38,.85);--chrome-line:rgba(74,58,38,.35);--nav:#A4522B}
+body[data-theme="terra"]{--chrome:rgba(243,233,212,.9);--chrome-line:rgba(243,233,212,.4);--nav:#F6EEDC}
+body[data-theme="dark"]{--chrome:rgba(239,227,200,.85);--chrome-line:rgba(239,227,200,.3);--nav:#C97A4A}
+#topbar .tb-r{letter-spacing:.28em}
+#dots{display:flex;gap:14px;align-items:center}
+.dot{width:9px;height:9px;border:1px solid var(--chrome);transform:rotate(45deg);
+  background:transparent;cursor:pointer;padding:0;transition:background .3s}
+.dot.on{background:var(--nav);border-color:var(--nav)}
+#pageno,.hint{letter-spacing:.3em}
+.hint{opacity:.55;letter-spacing:.22em}
+
+/* стрелки по краям */
+.navbtn{
+  position:fixed;top:50%;transform:translateY(-50%);z-index:20;
+  width:44px;height:44px;border-radius:50%;
+  border:1px solid var(--chrome-line);background:transparent;color:var(--chrome);
+  cursor:pointer;display:flex;align-items:center;justify-content:center;
+  transition:border-color .3s,transform .3s;
+}
+.navbtn:hover{border-color:var(--chrome);transform:translateY(-50%) scale(1.07)}
+.navbtn svg{width:16px;height:16px;stroke:currentColor;stroke-width:1.6;fill:none;stroke-linecap:round;stroke-linejoin:round}
+#prev{left:10px}#next{right:10px}
+
+/* ============ МУЗЫКАЛЬНЫЙ ПЛЕЕР ============ */
+#audiobox{
+  position:fixed;right:34px;bottom:60px;z-index:30;
+  display:flex;align-items:center;gap:12px;color:var(--chrome);
+}
+#audiobox.dead{opacity:.35}
+#playbtn{
+  width:46px;height:46px;border-radius:50%;
+  border:1px solid var(--chrome-line);background:transparent;color:var(--chrome);
+  cursor:pointer;display:flex;align-items:center;justify-content:center;
+  transition:border-color .3s,transform .3s;
+}
+#playbtn:hover{border-color:var(--chrome);transform:scale(1.06)}
+#playbtn svg{width:17px;height:17px;fill:currentColor}
+#playbtn .ic-pause{display:none}
+#playbtn.playing .ic-play{display:none}
+#playbtn.playing .ic-pause{display:block}
+.volwrap{display:flex;align-items:center;gap:9px;width:0;overflow:hidden;transition:width .35s ease}
+#audiobox:hover .volwrap,#audiobox.open .volwrap{width:152px}
+.volwrap svg{width:15px;height:15px;fill:currentColor;flex:none;opacity:.8}
+input[type=range]{
+  -webkit-appearance:none;appearance:none;background:transparent;
+  width:110px;height:18px;cursor:pointer;
+}
+input[type=range]::-webkit-slider-runnable-track{height:2px;background:var(--chrome-line)}
+input[type=range]::-webkit-slider-thumb{
+  -webkit-appearance:none;width:10px;height:10px;margin-top:-4px;
+  background:var(--nav);border:1px solid var(--chrome);border-radius:0;
+}
+input[type=range]::-moz-range-track{height:2px;background:var(--chrome-line)}
+input[type=range]::-moz-range-thumb{
+  width:9px;height:9px;background:var(--nav);border:1px solid var(--chrome);border-radius:0;
+}
+
+/* ============ СЛАЙДЫ ============ */
+.slide{
+  position:absolute;inset:0;
+  display:flex;align-items:center;justify-content:center;
+  opacity:0;visibility:hidden;
+  transition:opacity .55s ease,visibility 0s linear .55s;
+}
+.slide.active{opacity:1;visibility:visible;transition:opacity .55s ease}
+
+/* темы страниц */
+.slide{--paper:#EDE2C8;--ink:#33291D;--ink-soft:#5A4A37;--accent:#A4522B;
+  --softline:rgba(58,46,30,.30);--line:#3A2E20;
+  background:
+    radial-gradient(1200px 800px at 18% 10%,rgba(169,133,63,.10),transparent 62%),
+    radial-gradient(900px 700px at 86% 90%,rgba(164,82,43,.07),transparent 60%),
+    var(--paper);
+  color:var(--ink);
+}
+.slide.terra{--paper:#9C4C27;--ink:#F4EAD5;--ink-soft:#EBD8B7;--accent:#F6EEDC;
+  --softline:rgba(246,238,220,.35);--line:#F6EEDC;
+  background:
+    radial-gradient(1000px 720px at 68% 12%,rgba(246,238,220,.14),transparent 60%),
+    radial-gradient(800px 700px at 15% 95%,rgba(42,30,20,.20),transparent 55%),
+    var(--paper);
+}
+.slide.dark{--paper:#241A11;--ink:#EFE3C8;--ink-soft:#CBB896;--accent:#C97A4A;
+  --softline:rgba(239,227,200,.28);--line:#EFE3C8;
+  background:
+    radial-gradient(1000px 700px at 74% 8%,rgba(201,122,74,.13),transparent 55%),
+    radial-gradient(900px 800px at 12% 95%,rgba(169,133,63,.08),transparent 60%),
+    var(--paper);
+}
+/* двойная рамка-паспарту */
+.slide::before{content:"";position:absolute;inset:38px 34px 34px;border:1px solid var(--line);opacity:.55;pointer-events:none}
+.slide::after{content:"";position:absolute;inset:45px 41px 41px;border:1px solid var(--line);opacity:.25;pointer-events:none}
+
+.page{
+  width:min(1180px,100%);height:100%;
+  padding:76px 88px 66px;
+  display:flex;flex-direction:column;
+  overflow:hidden;
+}
+
+/* ============ ТИПОГРАФИКА ============ */
+.kicker{font-weight:600;font-size:12.5px;letter-spacing:.44em;text-transform:uppercase;color:var(--accent);text-align:center}
+.title{
+  font-family:"Oranienbaum","Cormorant",serif;font-weight:400;
+  font-size:clamp(28px,3.5vw,46px);line-height:1.12;
+  letter-spacing:.02em;text-transform:uppercase;text-align:center;
+  margin-top:12px;
+}
+.orn{display:flex;align-items:center;gap:16px;margin:20px 0}
+.orn::before,.orn::after{content:"";flex:1;height:1px;background:var(--line);opacity:.45}
+.dia{width:7px;height:7px;background:var(--accent);transform:rotate(45deg);flex:none}
+.ot{font-weight:600;font-size:12.5px;letter-spacing:.4em;text-transform:uppercase;color:var(--accent);white-space:nowrap}
+
+.prose{max-width:62ch}
+.prose p{font-size:clamp(16.5px,1.25vw,19.5px);line-height:1.62;color:var(--ink)}
+.prose p+p{margin-top:1em}
+.prose .dc::first-letter{
+  font-family:"Oranienbaum","Cormorant",serif;float:left;
+  font-size:3.9em;line-height:.8;padding:.04em .14em 0 0;color:var(--accent);
+}
+.takeaway{
+  font-family:"Oranienbaum","Cormorant",serif;
+  font-size:clamp(19px,1.9vw,26px);line-height:1.35;text-align:center;
+  color:var(--accent);padding:6px 12px;
+}
+.takeaway em{font-style:italic}
+
+/* отточия — строка «имя .... роль» */
+.rows .row{display:flex;align-items:baseline;gap:14px;padding:9px 0}
+.rows .k{font-weight:500;font-size:18px;letter-spacing:.03em;white-space:nowrap}
+.rows .dots{flex:1;border-bottom:2px dotted var(--ink);opacity:.38;transform:translateY(-5px);min-width:24px}
+.rows .v{font-style:italic;font-size:18px;text-align:right}
+
+/* глоссарий */
+.g-item{padding:15px 0;border-bottom:1px solid var(--softline)}
+.g-item:last-child{border-bottom:none}
+.g-t{font-family:"Oranienbaum","Cormorant",serif;font-size:21px;letter-spacing:.16em;text-transform:uppercase;color:var(--accent)}
+.g-d{font-size:17.5px;line-height:1.55;margin-top:6px;color:var(--ink)}
+
+/* правила зрителю */
+.rules li{display:grid;grid-template-columns:74px 1fr;gap:22px;padding:17px 0;list-style:none}
+.rules li+li{border-top:1px solid var(--softline)}
+.rn{font-family:"Oranienbaum","Cormorant",serif;font-size:36px;line-height:.9;color:var(--accent)}
+.rules h3{font-family:"Oranienbaum","Cormorant",serif;font-weight:400;font-size:20px;letter-spacing:.1em;text-transform:uppercase;margin-bottom:4px}
+.rules p{font-size:17px;line-height:1.5;color:var(--ink-soft)}
+
+/* большая цитата */
+.bq{
+  font-family:"Oranienbaum","Cormorant",serif;
+  font-size:clamp(21px,2.4vw,33px);line-height:1.35;text-align:center;
+  color:var(--accent);padding:0 40px;position:relative;
+}
+.bq::before,.bq::after{
+  font-family:"Cormorant",serif;position:absolute;font-size:90px;opacity:.28;line-height:1;
+}
+.bq::before{content:"„";left:-6px;top:-26px}
+.bq::after{content:"“";right:-6px;bottom:-40px}
+
+/* колонки */
+.cols{display:grid;grid-template-columns:.92fr 1.08fr;gap:58px;align-items:center;flex:1;min-height:0}
+.grid2{display:grid;grid-template-columns:.85fr 1.15fr;gap:56px;align-items:center;flex:1;min-height:0}
+
+/* программка */
+.bill{border:1px solid var(--softline);padding:26px 28px 20px;position:relative;background:rgba(0,0,0,.014)}
+.bill-head{font-family:"Oranienbaum","Cormorant",serif;font-size:15px;letter-spacing:.3em;text-transform:uppercase;text-align:center;color:var(--accent);margin-bottom:14px}
+.bill-mn{width:100%;height:13px;aspect-ratio:480/40;color:var(--accent);margin-top:16px}
+
+/* ============ ФОТОТАБЛИЦЫ (журнальные «илл.») ============ */
+.mn{width:min(480px,74%);aspect-ratio:12/1;color:var(--accent);margin:0 auto}
+.plate{
+  position:relative;border:1px solid var(--softline);padding:10px;
+  background:rgba(0,0,0,.03);cursor:zoom-in;
+  transition:transform .35s ease,box-shadow .35s ease;
+}
+.plate:hover{transform:translateY(-4px);box-shadow:0 18px 40px rgba(40,28,14,.18)}
+.plate img{
+  display:block;width:100%;height:100%;object-fit:cover;
+  border:1px solid var(--softline);
+  filter:sepia(.35) saturate(.85) contrast(1.03);
+  transition:filter .45s ease;
+}
+.plate:hover img{filter:none}
+.figcap{font-style:italic;font-size:14.5px;letter-spacing:.05em;color:var(--ink-soft);text-align:center;margin-top:12px}
+.p-tall{height:min(42vh,400px);aspect-ratio:3/4;width:auto}
+.p-wide{width:min(680px,92%);aspect-ratio:16/10;max-height:42vh}
+
+/* ============ ГАЛЕРЕЯ ============ */
+
+.gal{
+  flex:1;
+  min-height:0;
+  margin-top:8px;
+
+  display:grid;
+  grid-template-columns:repeat(5,1fr);
+  grid-auto-rows:170px;
+  grid-auto-flow:dense;
+
+  gap:12px;
+  overflow:auto;
+}
+
+.gal figure{
+  position:relative;
+  margin:0;
+  overflow:hidden;
+  border:1px solid var(--softline);
+  background:rgba(0,0,0,.05);
+  cursor:zoom-in;
+}
+
+.gal img{
+  width:100%;
+  height:100%;
+  object-fit:cover;
+  object-position:center;
+  display:block;
+
+  filter:sepia(.35) saturate(.85);
+  transition:filter .4s ease, transform .6s ease;
+}
+
+.gal figure:hover img{
+  filter:none;
+  transform:scale(1.05);
+}
+
+.gal .tag{
+  position:absolute;
+  left:9px;
+  bottom:9px;
+}
+
+.big{
+  grid-column:span 2;
+  grid-row:span 2;
+}
+
+.wide{
+  grid-column:span 2;
+}
+
+.tall{
+  grid-row:span 2;
+}
+
+/* ============ ПОЛНОЭКРАННЫЙ ПРОСМОТР ============ */
+#lightbox{position:fixed;inset:0;z-index:80;display:flex;align-items:center;justify-content:center}
+#lightbox[hidden]{display:none}
+.lb-back{position:absolute;inset:0;background:rgba(22,16,8,.93)}
+.lb-fig{
+  position:relative;background:#EDE2C8;border:1px solid #3A2E20;
+  padding:16px 16px 10px;max-width:min(88vw,1020px);
+  box-shadow:0 30px 90px rgba(0,0,0,.55);
+  animation:lbIn .4s cubic-bezier(.2,.7,.25,1) both;
+}
+@keyframes lbIn{from{opacity:0;transform:scale(.96) translateY(12px)}to{opacity:1;transform:none}}
+.lb-fig img{display:block;max-width:min(82vw,960px);max-height:68vh;border:1px solid rgba(58,46,30,.5)}
+.lb-fig figcaption{
+  display:flex;justify-content:space-between;gap:24px;padding-top:10px;
+  font-family:"Oranienbaum","Cormorant",serif;color:#33291D;
+  font-size:13.5px;letter-spacing:.22em;text-transform:uppercase;
+}
+.lb-btn{
+  position:fixed;top:50%;transform:translateY(-50%);z-index:81;
+  width:46px;height:46px;border-radius:50%;
+  border:1px solid rgba(237,226,200,.5);background:transparent;color:#EDE2C8;
+  cursor:pointer;display:flex;align-items:center;justify-content:center;
+  transition:border-color .3s,transform .3s;
+}
+.lb-btn:hover{border-color:#EDE2C8;transform:translateY(-50%) scale(1.08)}
+.lb-btn svg{width:16px;height:16px;stroke:currentColor;stroke-width:1.6;fill:none;stroke-linecap:round;stroke-linejoin:round}
+#lbPrev{left:26px}#lbNext{right:26px}
+#lbClose{
+  position:fixed;top:22px;right:26px;z-index:81;
+  width:46px;height:46px;border-radius:50%;
+  border:1px solid rgba(237,226,200,.5);background:transparent;color:#EDE2C8;
+  cursor:pointer;display:flex;align-items:center;justify-content:center;
+}
+#lbClose:hover{border-color:#EDE2C8}
+#lbClose svg{width:16px;height:16px;stroke:currentColor;stroke-width:1.6;fill:none;stroke-linecap:round}
+
+/* ============ ОБЛОЖКА ============ */
+.cover{display:flex;flex-direction:column;align-items:center;text-align:center}
+.cover .masthead{
+  font-family:"Oranienbaum","Cormorant",serif;font-size:clamp(22px,2.6vw,34px);
+  letter-spacing:.2em;text-transform:uppercase;
+}
+.cover .sub-mast{font-size:11px;letter-spacing:.5em;text-transform:uppercase;color:var(--ink-soft);margin-top:8px}
+.cover h1{
+  font-family:"Oranienbaum","Cormorant",serif;font-weight:400;
+  font-size:clamp(26px,3.8vw,52px);line-height:1.14;letter-spacing:.015em;
+  text-transform:uppercase;margin-top:22px;
+}
+.cover .dedic{font-style:italic;font-size:clamp(14px,1.25vw,18px);color:var(--ink-soft);margin-top:14px;max-width:64ch}
+.cover .foot{font-size:11px;letter-spacing:.44em;text-transform:uppercase;color:var(--ink-soft);margin-top:18px}
+.cover .plate{margin:18px 0}
+
+/* ============ ПОЯВЛЕНИЕ ============ */
+.slide [data-r]{opacity:0;transform:translateY(16px)}
+.slide.active [data-r]{animation:rise .75s cubic-bezier(.2,.7,.25,1) both;animation-delay:var(--d,0s)}
+@keyframes rise{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
+
+/* ============ АДАПТИВ ============ */
+@media (max-width:960px){
+  .page{padding:64px 44px 54px;overflow-y:auto}
+  .cols,.grid2{grid-template-columns:1fr;gap:26px}
+  .p-tall{height:34vh}
+  .p-wide{width:100%}
+  .prose p{font-size:16.5px}
+  #pageno{display:none}
+  .navbtn{top:auto;bottom:52px;transform:none}
+  .navbtn:hover{transform:scale(1.07)}
+  #audiobox{right:68px;bottom:56px}
+  .gal{grid-template-columns:repeat(2,1fr);grid-template-rows:none;grid-auto-rows:34vw}
+  .gal figure{grid-column:auto !important;grid-row:auto !important}
+  #lbPrev{left:8px}#lbNext{right:8px}
+}
+@media (max-height:780px){
+  .page{padding:62px 70px 52px;overflow-y:auto}
+  .prose p{font-size:16px}
+  .p-tall{height:36vh}
+  .p-wide{max-height:32vh}
+  .cover h1{font-size:clamp(22px,3.4vw,40px)}
+  .cover .plate{height:26vh !important}
+  .mn{width:min(380px,70%)}
+}
+/* печать: каждая страница — отдельный лист */
+@media print{
+  body{overflow:visible}
+  body::after,#topbar,#folio,.navbtn,#audiobox,#lightbox{display:none}
+  .slide{position:relative;opacity:1;visibility:visible;min-height:100vh;page-break-after:always}
+  .slide [data-r]{opacity:1;transform:none;animation:none}
+}
+</style>
+</head>
+<body data-theme="light">
+
+<!-- ================= ГРАФИКА: только типографский орнамент ================= -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+<defs>
+  <g id="meander">
+    <path fill="none" stroke="currentColor" stroke-width="3" d="M0 20 H10 V4 H24 V36 H17 V20 H40 H50 V4 H64 V36 H57 V20 H80 H90 V4 H104 V36 H97 V20 H120 H130 V4 H144 V36 H137 V20 H160 H170 V4 H184 V36 H177 V20 H200 H210 V4 H224 V36 H217 V20 H240 H250 V4 H264 V36 H257 V20 H280 H290 V4 H304 V36 H297 V20 H320 H330 V4 H344 V36 H337 V20 H360 H370 V4 H384 V36 H377 V20 H400 H410 V4 H424 V36 H417 V20 H440 H450 V4 H464 V36 H457 V20 H480"/>
+  </g>
+</defs>
+</svg>
+
+<!-- ================= КОЛОНТИТУЛ ================= -->
+<div id="topbar">
+  <span>Міръ Искусства · 1912</span>
+  <span class="tb-r">Послеполуденный отдыхъ фавна</span>
+</div>
+
+<!-- ================= СЛАЙДЫ ================= -->
+<div id="deck">
+
+  <!-- 1 · ОБЛОЖКА -->
+  <section class="slide light active" data-theme="light" aria-label="Обложка">
+    <div class="page cover">
+      <div data-r>
+        <div class="sub-mast">Ежемесячный журналъ · Театръ · Живопись · Музыка</div>
+        <div class="masthead">Міръ Искусства</div>
+      </div>
+      <div class="orn" style="margin:16px 0 4px;max-width:520px" data-r style="--d:.12s">
+        <span class="ot">№ V · Май 1912</span>
+      </div>
+      <svg class="mn" viewBox="0 0 480 40" aria-hidden="true" data-r style="--d:.2s"><use href="#meander"/></svg>
+      <figure class="plate p-tall" style="height:min(38vh,360px)" data-lb="0" data-r style="--d:.3s" role="button" tabindex="0" aria-label="Открыть иллюстрацию I">
+        <img src="img1.jpg" alt="Иллюстрация I">
+      </figure>
+      <div class="figcap" data-r style="--d:.38s">Илл. I · Къ статьѣ о балетѣ Вацлава Нижинскаго</div>
+      <svg class="mn" viewBox="0 0 480 40" aria-hidden="true" data-r style="--d:.45s"><use href="#meander"/></svg>
+      <h1 data-r style="--d:.52s">Фавнъ, который сошёлъ<br>съ древней вазы</h1>
+      <p class="dedic" data-r style="--d:.62s">«Послеполуденный отдыхъ фавна» — балетъ Вацлава Нижинскаго · музыка Клода Дебюсси · оформленіе Леона Бакста</p>
+      <div class="foot" data-r style="--d:.7s">Парижъ · Театръ Шатле · 29 мая 1912 года</div>
+    </div>
+  </section>
+
+  <!-- 2 · ХРОНИКА ПРЕМЬЕРЫ -->
+  <section class="slide light" data-theme="light" aria-label="Хроника премьеры">
+    <div class="page">
+      <div data-r>
+        <div class="kicker">I · Хроника премьеры</div>
+        <h2 class="title">Парижъ, 29 мая 1912 года</h2>
+        <div class="orn"><span class="dia"></span></div>
+      </div>
+      <div class="cols" style="grid-template-columns:1.05fr .75fr">
+        <div class="prose" style="max-width:56ch;align-self:center">
+          <p class="dc" data-r style="--d:.15s">В театре Шатле публика ждёт балет — с виртуозными прыжками, вращениями и понятным сюжетом. Но занавес открывается, и зрители видят не привычное зрелище, а <em>словно ожившую древнегреческую вазу</em>: на фоне неподвижного пейзажа возникает фавн, а его тело складывается в непривычные, угловатые позы.</p>
+          <p class="takeaway" data-r style="--d:.35s">Такъ Вацлавъ Нижинскій предложилъ зрителямъ не просто новую исторію — <em>новый способъ смотреть на танецъ</em>.</p>
+        </div>
+        <div style="justify-self:center" data-r style="--d:.25s">
+          <figure class="plate p-tall" style="height:min(44vh,420px)" data-lb="1" role="button" tabindex="0" aria-label="Открыть иллюстрацию II">
+            <img src="img2.jpg" alt="Иллюстрация II">
+          </figure>
+          <div class="figcap">Илл. II · Парижъ, 1912</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 3 · ПРОГРАММА -->
+  <section class="slide light" data-theme="light" aria-label="Программа и сюжет">
+    <div class="page">
+      <div data-r>
+        <div class="kicker">II · Программа</div>
+        <h2 class="title">Мифъ, музыка и полуденная грёза</h2>
+        <div class="orn"><span class="dia"></span></div>
+      </div>
+      <div class="grid2">
+        <div class="bill" data-r style="--d:.15s">
+          <div class="bill-head">Театръ Шатле · Парижъ</div>
+          <div class="rows">
+            <div class="row"><span class="k">Хореографія</span><span class="dots"></span><span class="v">Вацлавъ Нижинскій</span></div>
+            <div class="row"><span class="k">Музыка</span><span class="dots"></span><span class="v">Клодъ Дебюсси</span></div>
+            <div class="row"><span class="k">Сценографія</span><span class="dots"></span><span class="v">Леонъ Бакстъ</span></div>
+            <div class="row"><span class="k">Поэма</span><span class="dots"></span><span class="v">Стефанъ Малларме</span></div>
+            <div class="row"><span class="k">Труппа</span><span class="dots"></span><span class="v">«Русскіе балеты»</span></div>
+            <div class="row"><span class="k">Премьера</span><span class="dots"></span><span class="v">29 мая 1912</span></div>
+          </div>
+          <svg class="bill-mn" viewBox="0 0 480 40" preserveAspectRatio="none" aria-hidden="true"><use href="#meander"/></svg>
+        </div>
+        <div class="prose">
+          <p class="dc" data-r style="--d:.25s">Одноактный балет, созданный Нижинским для труппы Сергея Дягилева «Русские балеты». В центре — фавн, мифическое существо, которое отдыхает в полуденную жару и играет на свирели. Появляются нимфы. Фавн очарован, но встреча коротка: нимфы исчезают, оставив покрывало. Герой остаётся один — теперь ему доступны только воспоминание и воображение.</p>
+          <p data-r style="--d:.4s">Здесь почти нет привычного сюжетного развития. Важнее сама атмосфера: жаркий полдень, внезапное волнение, желание, исчезновение и память. Зритель наблюдает не столько внешнее событие, сколько <em>внутреннюю грёзу фавна</em>.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 4 · ВАЗА -->
+  <section class="slide light" data-theme="light" aria-label="Античная ваза как язык танца">
+    <div class="page">
+      <div data-r>
+        <div class="kicker">III · Пластика</div>
+        <h2 class="title">Какъ античная ваза стала языкомъ танца</h2>
+        <div class="orn"><span class="dia"></span></div>
+      </div>
+      <div class="cols">
+        <div style="display:flex;flex-direction:column;align-items:center;justify-self:center" data-r style="--d:.15s">
+          <figure class="plate p-tall" style="height:min(52vh,480px)" data-lb="3" role="button" tabindex="0" aria-label="Открыть иллюстрацию IV">
+            <img src="img4.jpg" alt="Иллюстрация IV">
+          </figure>
+          <p class="figcap">Илл. IV · Древніе образцы пластики</p>
+        </div>
+        <div>
+          <div class="g-item" data-r style="--d:.25s">
+            <div class="g-t">Профиль</div>
+            <div class="g-d">Нижинский вдохновлялся древнегреческими вазами: фигуры показаны в профиль, движения условны, позы складываются в чёткий рисунок. Танцовщики двигались боком к зрителю — как ожившие изображения.</div>
+          </div>
+          <div class="g-item" data-r style="--d:.35s">
+            <div class="g-t">Линія</div>
+            <div class="g-d">Вместо привычного ощущения полёта — отчётливые линии. Вместо непрерывного потока — выразительные позы и остановки. Тело направлено сразу в разные стороны: корпус — к публике, голова — в профиль.</div>
+          </div>
+          <div class="g-item" data-r style="--d:.45s">
+            <div class="g-t">Плоскость</div>
+            <div class="g-d">Каждый жест становился частью общего рисунка, а пространство сцены воспринималось почти как плоскость картины — как фриз или барельеф.</div>
+          </div>
+          <div class="g-item" data-r style="--d:.55s">
+            <div class="g-t">Знакъ</div>
+            <div class="g-d">Движение не исчезало — оно начинало «произносить» свои фразы. Поза становилась знаком, пауза — смысловой остановкой, направление взгляда — частью хореографии.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 5 · СЛОВАРЬ ЖЕСТОВ (терракота) -->
+  <section class="slide terra" data-theme="terra" aria-label="Вместо виртуозности — образ и чувство">
+    <div class="page">
+      <svg class="mn" viewBox="0 0 480 40" aria-hidden="true" data-r><use href="#meander"/></svg>
+      <div style="text-align:center;margin:18px 0 8px" data-r style="--d:.1s">
+        <div class="kicker">IV · Вместо виртуозности</div>
+        <h2 class="title">Образъ и чувство</h2>
+      </div>
+      <div class="cols" style="grid-template-columns:1.05fr .95fr;align-items:start;padding-top:8px">
+        <div class="prose" style="max-width:56ch">
+          <p data-r style="--d:.2s">Для зрителей начала XX века такой подход был смелым. Нижинский отошёл от привычных балетных ожиданий: тело — не только инструмент для прыжков и вращений, но линия, силуэт и образ. Балет строился не вокруг демонстрации техники, а вокруг настроения и пластического высказывания.</p>
+          <p data-r style="--d:.4s" style="margin-top:1em">Леон Бакст помог создать для этого языка подходящую сцену: костюмы и оформление поддерживали впечатление древнего мифа, возникшего перед зрителем как живая картина. Хореография, музыка и визуальный образ работали вместе — части одного спектакля.</p>
+        </div>
+        <div data-r style="--d:.3s" style="justify-self:stretch">
+          <div class="bill" style="border-color:var(--softline)">
+            <div class="bill-head">Словарь жестовъ</div>
+            <div class="rows">
+              <div class="row"><span class="k">Наклонъ головы</span><span class="dots"></span><span class="v">вниманіе</span></div>
+              <div class="row"><span class="k">Вытянутая рука</span><span class="dots"></span><span class="v">стремленіе</span></div>
+              <div class="row"><span class="k">Неподвижность</span><span class="dots"></span><span class="v">оборвавшаяся встреча</span></div>
+              <div class="row"><span class="k">Взглядъ</span><span class="dots"></span><span class="v">хореографія</span></div>
+            </div>
+            <svg class="bill-mn" viewBox="0 0 480 40" preserveAspectRatio="none" aria-hidden="true"><use href="#meander"/></svg>
+          </div>
+        </div>
+      </div>
+      <svg class="mn" viewBox="0 0 480 40" aria-hidden="true" data-r style="--d:.5s;margin-top:auto"><use href="#meander"/></svg>
+    </div>
+  </section>
+
+  <!-- 6 · ИСЧЕЗАЮЩЕЕ ЖЕЛАНИЕ (чернолаковый) -->
+  <section class="slide dark" data-theme="dark" aria-label="Фавн, нимфы и исчезающее желание">
+    <div class="page">
+      <div data-r>
+        <div class="kicker">V · Толкованіе</div>
+        <h2 class="title">Фавнъ, нимфы и исчезающее желаніе</h2>
+        <div class="orn"><span class="dia"></span></div>
+      </div>
+      <div style="display:flex;justify-content:center;padding-top:4px">
+        <div class="prose" style="max-width:62ch">
+          <p class="dc" data-r style="--d:.15s">Нимф можно понимать как образы красоты, мечты или вдохновения: они появляются, очаровывают фавна и ускользают. Единого толкования нет — происходящее реально, или перед нами грёза фавна?</p>
+          <p data-r style="--d:.3s">Оставленное покрывало напоминает герою о встрече. Он не может вернуть нимфу — но может удержать её след. Предмет становится <em>знаком памяти</em>: попыткой сохранить то, что уже исчезло.</p>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:center;margin-top:auto" data-r style="--d:.45s">
+        <figure class="plate p-wide" data-lb="5" role="button" tabindex="0" aria-label="Открыть иллюстрацию VI">
+          <img src="img6.jpg" alt="Иллюстрация VI">
+        </figure>
+        <p class="figcap">Илл. VI · Грёза фавна</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 7 · ПОЛЕМИКА -->
+  <section class="slide light" data-theme="light" aria-label="Почему спектакль вызвал споры">
+    <div class="page">
+      <div data-r>
+        <div class="kicker">VI · Полемика</div>
+        <h2 class="title">Почему спектакль вызвалъ споры</h2>
+        <div class="orn"><span class="dia"></span></div>
+      </div>
+      <div class="cols" style="grid-template-columns:1.1fr .72fr;align-items:start">
+        <div class="prose" style="max-width:58ch">
+          <p class="dc" data-r style="--d:.15s">Чувственный характер постановки и необычная пластика удивили публику: некоторые зрители и критики сочли балет слишком смелым. Но спор вокруг спектакля оказался важен — стало ясно, что балет может не только развлекать, но и провоцировать, тревожить и предлагать новые способы выражения.</p>
+          <div style="margin-top:26px" data-r style="--d:.4s">
+            <div class="orn" style="margin:0 0 14px"><span class="dia"></span></div>
+            <blockquote class="bq" style="font-size:clamp(18px,2vw,26px)">Нижинскій не просто изменилъ отдельныя движенія — онъ переосмыслилъ, какъ тело можетъ разсказывать исторію.</blockquote>
+            <div class="orn" style="margin:14px 0 0"><span class="dia"></span></div>
+          </div>
+        </div>
+        <div style="justify-self:center" data-r style="--d:.3s">
+          <figure class="plate p-tall" style="height:min(40vh,380px)" data-lb="6" role="button" tabindex="0" aria-label="Открыть иллюстрацию VII">
+            <img src="img7.jpg" alt="Иллюстрация VII">
+          </figure>
+          <p class="figcap">Илл. VII</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 8 · СОВЕТ ЗРИТЕЛЮ -->
+  <section class="slide light" data-theme="light" aria-label="Как смотреть этот балет сегодня">
+    <div class="page">
+      <div data-r>
+        <div class="kicker">VII · Советъ зрителю</div>
+        <h2 class="title">Какъ смотреть этотъ балетъ сегодня</h2>
+        <div class="orn"><span class="dia"></span></div>
+      </div>
+      <p class="takeaway" data-r style="--d:.12s" style="margin-bottom:8px">Смотрите на постановку не как на рассказ, где нужно следить за каждым событием, — а как на картину, которая постепенно оживает.</p>
+      <ol class="rules" style="margin-top:6px">
+        <li data-r style="--d:.22s">
+          <span class="rn">I</span>
+          <div><h3>Профиль и силуэтъ</h3><p>Танцовщики напоминают фигуры на древнегреческой вазе — смотрите на рисунок тела сбоку.</p></div>
+        </li>
+        <li data-r style="--d:.32s">
+          <span class="rn">II</span>
+          <div><h3>Жесты и паузы</h3><p>Движение выразительно даже тогда, когда почти замирает: остановка — часть речи.</p></div>
+        </li>
+        <li data-r style="--d:.42s">
+          <span class="rn">III</span>
+          <div><h3>Направленіе взгляда</h3><p>Оно подсказывает, к чему стремится герой, — взгляд здесь часть хореографии.</p></div>
+        </li>
+        <li data-r style="--d:.52s">
+          <span class="rn">IV</span>
+          <div><h3>Покрывало</h3><p>Материальный след исчезнувшей встречи — знак памяти в руках фавна.</p></div>
+        </li>
+      </ol>
+    </div>
+  </section>
+
+  <!-- 9 · ГАЛЕРЕЯ -->
+  <section class="slide light" data-theme="light" aria-label="Галерея иллюстраций">
+    <div class="page">
+      <div data-r>
+        <div class="kicker">VIII · Приложеніе</div>
+        <h2 class="title">Галерея иллюстрацій</h2>
+        <div class="orn"><span class="dia"></span></div>
+      </div>
+      <div class="gal" id="gal"></div>
+      <p class="figcap" data-r style="--d:.4s" style="margin-top:12px">Нажмите на таблицу, чтобы рассмотреть её въ увеличенномъ видѣ</p>
+    </div>
+  </section>
+
+  <!-- 10 · ФИНАЛ (терракота) -->
+  <section class="slide terra" data-theme="terra" aria-label="Финал">
+    <div class="page">
+      <svg class="mn" viewBox="0 0 480 40" aria-hidden="true" data-r><use href="#meander"/></svg>
+      <div style="text-align:center;margin:22px 0 6px" data-r style="--d:.1s">
+        <div class="kicker">Finis</div>
+      </div>
+      <div style="flex:1;display:flex;flex-direction:column;justify-content:center;align-items:center;gap:20px">
+        <blockquote class="bq" data-r style="--d:.2s">Нижинскій заставилъ древнія позы заговорить движеніемъ — и напомнилъ, что иногда одинъ жестъ способенъ разсказать больше, чемъ цѣлая исторія.</blockquote>
+        <figure class="plate p-wide" style="width:min(520px,78%)" data-lb="8" data-r style="--d:.35s" role="button" tabindex="0" aria-label="Открыть иллюстрацию IX">
+          <img src="img9.jpg" alt="Иллюстрация IX">
+        </figure>
+        <p class="prose" data-r style="--d:.45s" style="max-width:56ch;text-align:center;font-size:clamp(16px,1.2vw,19px);line-height:1.6;color:var(--ink)">«Послеполуденный отдых фавна» — о желании, воображении и памяти. И о том, как искусство изобретает для них новый язык.</p>
+      </div>
+      <div style="text-align:center;margin-top:10px" data-r style="--d:.58s">
+        <div class="foot" style="font-size:11px;letter-spacing:.4em;text-transform:uppercase;color:var(--ink)">Русскіе балеты С. П. Дягилева · Театръ Шатле · Парижъ · 1912</div>
+      </div>
+      <svg class="mn" viewBox="0 0 480 40" aria-hidden="true" data-r style="--d:.68s"><use href="#meander"/></svg>
+    </div>
+  </section>
+
+</div>
+
+<!-- ================= ГАЛЕРЕЯ: ПОЛНОЭКРАННЫЙ ПРОСМОТР ================= -->
+<div id="lightbox" hidden>
+  <div class="lb-back" id="lbBack"></div>
+  <button class="lb-btn" id="lbPrev" aria-label="Предыдущая иллюстрация"><svg viewBox="0 0 24 24"><path d="M15 4 L8 12 L15 20"/></svg></button>
+  <button class="lb-btn" id="lbNext" aria-label="Следующая иллюстрация"><svg viewBox="0 0 24 24"><path d="M9 4 L16 12 L9 20"/></svg></button>
+  <button id="lbClose" aria-label="Закрыть"><svg viewBox="0 0 24 24"><path d="M6 6 L18 18 M18 6 L6 18"/></svg></button>
+  <figure class="lb-fig">
+    <img id="lbImg" src="" alt="Иллюстрация">
+    <figcaption><span id="lbCap">Илл. I</span><span id="lbCount">1 / 11</span></figcaption>
+  </figure>
+</div>
+
+<!-- ================= МУЗЫКА ================= -->
+<audio id="track" src="music.mp3" loop preload="metadata"></audio>
+<div id="audiobox">
+  <button id="playbtn" aria-label="Включить или выключить музыку">
+    <svg class="ic-play" viewBox="0 0 24 24"><path d="M7 4 L20 12 L7 20 Z"/></svg>
+    <svg class="ic-pause" viewBox="0 0 24 24"><path d="M6 4 H10 V20 H6 Z M14 4 H18 V20 H14 Z"/></svg>
+  </button>
+  <div class="volwrap">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9 v6 h4 l5 4 V5 L8 9 H4 Z M16.5 8.5 a5 5 0 0 1 0 7 l-1.2-1.2 a3.3 3.3 0 0 0 0-4.6 Z"/></svg>
+    <input type="range" id="vol" min="0" max="1" step="0.01" value="0.65" aria-label="Громкость музыки">
+  </div>
+</div>
+
+<!-- ================= ФОЛИО И НАВИГАЦИЯ ================= -->
+<div id="folio">
+  <span id="pageno">стр. 1</span>
+  <div id="dots" role="tablist" aria-label="Страницы"></div>
+  <span class="hint">клавиши ← → · или пробелъ</span>
+</div>
+<button class="navbtn" id="prev" aria-label="Предыдущая страница"><svg viewBox="0 0 24 24"><path d="M15 4 L8 12 L15 20"/></svg></button>
+<button class="navbtn" id="next" aria-label="Следующая страница"><svg viewBox="0 0 24 24"><path d="M9 4 L16 12 L9 20"/></svg></button>
+
+<script>
+(function(){
+  /* ---------- изображения галереи ---------- */
+  const IMGS=['img1.jpg','img2.jpg','img3.jpg','img4.jpg','img5.jpg','img6.jpg','img7.jpg','img8.jpg','img9.jpg','img10.jpg','img11.jpg'];
+  const ROMAN=['I','II','III','IV','V','VI','VII','VIII','IX','X','XI'];
+  const N=IMGS.length;
+
+  /* ---------- листание журнала ---------- */
+  const slides=[...document.querySelectorAll('.slide')];
+  const dotsBox=document.getElementById('dots');
+  const pageno=document.getElementById('pageno');
+  let idx=0;
+
+  slides.forEach((_,i)=>{
+    const b=document.createElement('button');
+    b.className='dot';b.setAttribute('aria-label','Страница '+(i+1));
+    b.addEventListener('click',()=>show(i));
+    dotsBox.appendChild(b);
+  });
+  const dots=[...dotsBox.children];
+
+  function show(n){
+    idx=Math.max(0,Math.min(slides.length-1,n));
+    slides.forEach((s,i)=>s.classList.toggle('active',i===idx));
+    dots.forEach((d,i)=>d.classList.toggle('on',i===idx));
+    document.body.dataset.theme=slides[idx].dataset.theme;
+    pageno.textContent='стр. '+(idx+1);
+    history.replaceState(null,'','#'+(idx+1));
+  }
+
+  document.getElementById('prev').addEventListener('click',()=>show(idx-1));
+  document.getElementById('next').addEventListener('click',()=>show(idx+1));
+
+  addEventListener('keydown',e=>{
+    if(!lb.hidden){                       // открыт просмотр иллюстрации
+      if(e.key==='ArrowRight'){e.preventDefault();lbNav(1);}
+      if(e.key==='ArrowLeft'){e.preventDefault();lbNav(-1);}
+      if(e.key==='Escape'){lbClose();}
+      return;
+    }
+    if(e.key==='ArrowRight'||e.key==='PageDown'||e.key===' '){e.preventDefault();show(idx+1);}
+    if(e.key==='ArrowLeft'||e.key==='PageUp'){e.preventDefault();show(idx-1);}
+    if(e.key==='Home')show(0);
+    if(e.key==='End')show(slides.length-1);
+  });
+
+  let sx=null;
+  addEventListener('touchstart',e=>{sx=e.touches[0].clientX},{passive:true});
+  addEventListener('touchend',e=>{
+    if(sx===null||!lb.hidden)return;
+    const dx=e.changedTouches[0].clientX-sx;
+    if(Math.abs(dx)>46)show(idx+(dx<0?1:-1));
+    sx=null;
+  },{passive:true});
+
+  /* ---------- раскладка галереи (журнальная сетка 6×3) ---------- */
+  const gal=document.getElementById('gal');
+ const SPANS={
+  0:'big',
+  3:'wide',
+  5:'tall',
+  7:'wide',
+  10:'wide'
+};
+  IMGS.forEach((src,i)=>{
+    const f=document.createElement('figure');
+    if(SPANS[i]){
+  f.classList.add(SPANS[i]);
+}
+    f.dataset.lb=i;f.tabIndex=0;
+    f.setAttribute('role','button');
+    f.setAttribute('aria-label','Открыть иллюстрацию '+ROMAN[i]);
+    const img=document.createElement('img');
+    img.src=src;img.alt='Иллюстрация '+ROMAN[i];
+    img.loading='lazy';img.decoding='async';
+    const t=document.createElement('span');
+    t.className='tag';t.textContent=ROMAN[i];
+    f.append(img,t);gal.appendChild(f);
+  });
+
+  /* ---------- полноэкранный просмотр ---------- */
+  const lb=document.getElementById('lightbox');
+  const lbImg=document.getElementById('lbImg');
+  const lbCap=document.getElementById('lbCap');
+  const lbCount=document.getElementById('lbCount');
+  let cur=0;
+
+  function lbOpen(i){
+    cur=(i%N+N)%N;
+    lbImg.src=IMGS[cur];
+    lbImg.alt='Иллюстрация '+ROMAN[cur];
+    lbCap.textContent='Илл. '+ROMAN[cur]+' · Послеполуденный отдыхъ фавна';
+    lbCount.textContent=(cur+1)+' / '+N;
+    lb.hidden=false;
+  }
+  function lbClose(){lb.hidden=true;}
+  function lbNav(d){lbOpen(cur+d);}
+
+  document.querySelectorAll('[data-lb]').forEach(el=>{
+    el.addEventListener('click',()=>lbOpen(+el.dataset.lb));
+    el.addEventListener('keydown',e=>{
+      if(e.key==='Enter'||e.key===' '){e.preventDefault();lbOpen(+el.dataset.lb);}
+    });
+  });
+  document.getElementById('lbBack').addEventListener('click',lbClose);
+  document.getElementById('lbClose').addEventListener('click',lbClose);
+  document.getElementById('lbPrev').addEventListener('click',()=>lbNav(-1));
+  document.getElementById('lbNext').addEventListener('click',()=>lbNav(1));
+
+  /* ---------- музыка: кнопка и громкость ---------- */
+  const track=document.getElementById('track');
+  const playbtn=document.getElementById('playbtn');
+  const vol=document.getElementById('vol');
+  const audiobox=document.getElementById('audiobox');
+
+  const saved=localStorage.getItem('mi-vol');
+  if(saved!==null)vol.value=saved;
+  track.volume=vol.value;
+
+  playbtn.addEventListener('click',()=>{
+    if(track.paused){
+      track.play().catch(()=>audiobox.classList.add('dead'));
+    }else{
+      track.pause();
+    }
+  });
+  track.addEventListener('play',()=>{playbtn.classList.add('playing');audiobox.classList.add('open');});
+  track.addEventListener('pause',()=>playbtn.classList.remove('playing'));
+  track.addEventListener('error',()=>{
+    audiobox.classList.add('dead');
+    playbtn.title='Файл music.mp3 не найден — положите его рядом с презентацией';
+  });
+  vol.addEventListener('input',()=>{
+    track.volume=vol.value;
+    localStorage.setItem('mi-vol',vol.value);
+  });
+
+  /* ---------- старт ---------- */
+  const h=parseInt(location.hash.slice(1),10);
+  show(isNaN(h)?0:h-1);
+})();
+</script>
+</body>
+</html>
